@@ -50,6 +50,7 @@ window.addEventListener( 'load',
             console.time('t');
             var hits = viewer.computeIntersections( ev.clientX, canvas.height - ev.clientY );
             console.timeEnd('t');
+            console.log(hits.length)
             hits.sort( function ( a, b ) {
                 return a.ratio - b.ratio;
             } );
