@@ -239,6 +239,47 @@ define( [
                 return;
             }
 
+            // this is the trumbore-moller algorithm, this is faster
+            // simply uncomment and the function will still work
+            // if a hit occurs the old algorithm must be run in order to get the right
+            // complete hit information (ratio, TriangleHit, normal...)
+
+            // var EPSILON = 1E-20;
+
+            // //Find vectors for two edges sharing V1
+            // var e1 = Vec3.sub( v2, v1, [ 0.0, 0.0, 0.0 ] );
+            // var e2 = Vec3.sub( v3, v1, [ 0.0, 0.0, 0.0 ] );
+            // //Begin calculating determinant - also used to calculate u parameter
+            // var P = Vec3.cross( this.dir, e2, [ 0.0, 0.0, 0.0 ] );
+            // //if determinant is near zero, ray lies in plane of triangle
+            // var det = Vec3.dot( e1, P );
+            // //NOT CULLING
+            // if ( det > -EPSILON && det < EPSILON )
+            //     return;
+            // var invDet = 1.0 / det;
+
+            // //calculate distance from V1 to ray origin
+            // var T = Vec3.sub( this.start, v1, [ 0.0, 0.0, 0.0 ] );
+
+            // //Calculate u parameter and test bound
+            // var u = Vec3.dot( T, P ) * invDet;
+            // //The intersection lies outside of the triangle
+            // if ( u < 0.0 || u > 1.0 )
+            //     return;
+
+            // //Prepare to test v parameter
+            // var Q = Vec3.cross( T, e1, [ 0.0, 0.0, 0.0 ] );
+
+            // //Calculate V parameter and test bound
+            // var v = Vec3.dot( this.dir, Q ) * invDet;
+            // //The intersection lies outside of the triangle
+            // if ( v < 0.0 || ( u + v ) > 1.0 )
+            //     return;
+
+            // var t = Vec3.dot( e2, Q ) * invDet;
+            // if ( t < EPSILON ) //no intersection
+            //     return;
+
             var v12 = Vec3.sub( v2, v1, [] );
             var n12 = Vec3.cross( v12, this.dir, [] );
             var ds12 = Vec3.dot( Vec3.sub( this.start, v1, [] ), n12 );

@@ -15,9 +15,15 @@ function loadUrl( url, viewer, node ) {
 };
 
 function loadModel( data, viewer, node ) {
-    osgDB.Promise.when( osgDB.parseSceneGraph( data ) ).then( function ( child ) {
+    // var promise = osgDB.parseSceneGraph( data );
+    var promise = osg.createTexturedSphere( 1.0, 100, 100 );
+
+    osgDB.Promise.when( promise ).then( function ( child ) {
         node.addChild( child );
         viewer.getManipulator().computeHomePosition();
+
+        var treeBuilder = new osg.KdTreeBuilder();
+        treeBuilder.apply( node );
     } );
 };
 
@@ -47,10 +53,10 @@ window.addEventListener( 'load',
         viewer.run();
 
         canvas.addEventListener( 'mousedown', function ( ev ) {
-            console.time('t');
+            console.time( 't' );
             var hits = viewer.computeIntersections( ev.clientX, canvas.height - ev.clientY );
-            console.timeEnd('t');
-            console.log(hits.length)
+            console.timeEnd( 't' );
+            console.log( hits.length );
             hits.sort( function ( a, b ) {
                 return a.ratio - b.ratio;
             } );

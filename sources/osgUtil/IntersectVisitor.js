@@ -78,6 +78,9 @@ define( [
         getViewMatrix: function () {
             return this.viewMatrix;
         },
+        intersectSegmentWithShape: function ( start, end, shape ) {
+            return shape.intersect( start, end, this.hits, this.nodePath );
+        },
         intersectSegmentWithGeometry: function ( start, end, geometry ) {
             var ti = new TriangleIntersect();
             ti.setNodePath( this.nodePath );
@@ -120,10 +123,13 @@ define( [
             if ( node.primitives ) {
                 var ns = [ 0.0, 0.0, 0.0 ];
                 var ne = [ 0.0, 0.0, 0.0 ];
-                if ( this.transformRay( ns, ne ) )
-                    this.intersectSegmentWithGeometry( ns, ne, node );
-                else
+                if ( !this.transformRay( ns, ne ) )
                     return;
+                var kdtree = node.getShape();
+                if ( kdtree ) {
+                    this.intersectSegmentWithShape( ns, ne, kdtree );
+                } else
+                    this.intersectSegmentWithGeometry( ns, ne, node );
             }
 
             if ( node.traverse ) {

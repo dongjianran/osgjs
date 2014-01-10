@@ -2,8 +2,9 @@ define( [
     'osgUtil/Composer',
     'osgUtil/IntersectVisitor',
     'osgUtil/ParameterVisitor',
-    'osgUtil/TriangleIntersect'
-], function (Composer, IntersectVisitor, ParameterVisitor, TriangleIntersect) {
+    'osgUtil/TriangleIntersect',
+    'osgUtil/TriangleBuilder'
+], function ( Composer, IntersectVisitor, ParameterVisitor, TriangleIntersect, TriangleBuilder ) {
 
     var osgUtil = {};
 
@@ -11,6 +12,7 @@ define( [
     osgUtil.IntersectVisitor = IntersectVisitor;
     osgUtil.ParameterVisitor = ParameterVisitor;
     osgUtil.TriangleIntersect = TriangleIntersect;
+    osgUtil.TriangleBuilder = TriangleBuilder;
 
     return osgUtil;
 } );
