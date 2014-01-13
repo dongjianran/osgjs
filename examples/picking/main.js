@@ -16,14 +16,21 @@ function loadUrl( url, viewer, node ) {
 
 function loadModel( data, viewer, node ) {
     // var promise = osgDB.parseSceneGraph( data );
-    var promise = osg.createTexturedSphere( 1.0, 100, 100 );
+    var promise = osg.createTexturedSphere( 1.0, 500, 500 );
 
     osgDB.Promise.when( promise ).then( function ( child ) {
         node.addChild( child );
         viewer.getManipulator().computeHomePosition();
 
-        var treeBuilder = new osg.KdTreeBuilder();
+        console.log( 'vert ' + child.getVertexAttributeList().Vertex.getElements().length / 3 );
+        console.time( 'build' );
+        var treeBuilder = new osg.KdTreeBuilder( {
+            _numVerticesProcessed: 0,
+            _targetNumTrianglesPerLeaf: 50,
+            _maxNumLevels: 20
+        } );
         treeBuilder.apply( node );
+        console.timeEnd( 'build' );
     } );
 };
 
@@ -53,9 +60,9 @@ window.addEventListener( 'load',
         viewer.run();
 
         canvas.addEventListener( 'mousedown', function ( ev ) {
-            console.time( 't' );
+            console.time( 'pick' );
             var hits = viewer.computeIntersections( ev.clientX, canvas.height - ev.clientY );
-            console.timeEnd( 't' );
+            console.timeEnd( 'pick' );
             console.log( hits.length );
             hits.sort( function ( a, b ) {
                 return a.ratio - b.ratio;

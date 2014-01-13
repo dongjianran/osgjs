@@ -9,57 +9,74 @@ define( [
         this._indices = [];
     };
 
+    // XXX Use typed array maybe?
     TriangleBuilder.prototype = {
         applyDrawElementsTriangles: function ( count, indexes ) {
             var indices = this._indices;
-            for ( var idx = 0; idx < count; idx += 3 ) {
-                indices.push( indexes[ idx ], indexes[ idx + 1 ], indexes[ idx + 2 ] );
-            }
+            indices.length = count;
+            for ( var i = 0; i < count; ++i )
+                indices[ i ] = indexes[ i ];
         },
 
         applyDrawElementsTriangleStrip: function ( count, indexes ) {
             var indices = this._indices;
-            for ( var i = 2, idx = 0; i < count; i++, idx++ ) {
+            indices.length = count - 2;
+            for ( var i = 2, idx = 0; i < count; ++i, ++idx ) {
                 if ( i % 2 ) {
-                    indices.push( indexes[ idx ], indexes[ idx + 2 ], indexes[ idx + 1 ] );
+                    indices[ i - 2 ] = indexes[ idx ];
+                    indices[ i - 1 ] = indexes[ idx + 2 ];
+                    indices[ i ] = indexes[ idx + 1 ];
                 } else {
-                    indices.push( indexes[ idx ], indexes[ idx + 1 ], indexes[ idx + 2 ] );
+                    indices[ i - 2 ] = indexes[ idx ];
+                    indices[ i - 1 ] = indexes[ idx + 1 ];
+                    indices[ i ] = indexes[ idx + 2 ];
                 }
             }
         },
 
         applyDrawElementsTriangleFan: function ( count, indexes ) {
             var indices = this._indices;
+            indices.length = count - 2;
             var idx0 = indexes[ 0 ];
-            for ( var i = 2, idx = 1; i < count; i++, idx++ ) {
-                indices.push( indexes[ idx0 ], indexes[ idx ], indexes[ idx + 1 ] );
+            for ( var i = 2, idx = 1; i < count; ++i, ++idx ) {
+                indices[ i - 2 ] = indexes[ idx0 ];
+                indices[ i - 1 ] = indexes[ idx ];
+                indices[ i ] = indexes[ idx + 1 ];
             }
         },
 
         applyDrawArraysTriangles: function ( first, count ) {
             var indices = this._indices;
-            count /= 3;
-            for ( var idx = first / 3; idx < count; idx++ ) {
-                indices.push( idx, idx + 1, idx + 2 );
+            indices.length = count - first;
+            for ( var i = 0, idx = first; i < count; ++i, ++idx ) {
+                indices[ i ] = idx;
             }
         },
 
         applyDrawArraysTriangleStrip: function ( first, count ) {
             var indices = this._indices;
-            for ( var i = 2, idx = first; i < count; i++, idx++ ) {
+            indices.length = count - 2;
+            for ( var i = 2, idx = first; i < count; ++i, ++idx ) {
                 if ( i % 2 ) {
-                    indices.push( idx, idx + 2, idx + 1 );
+                    indices[ i - 2 ] = idx;
+                    indices[ i - 1 ] = idx + 2;
+                    indices[ i ] = idx + 1;
                 } else {
-                    indices.push( idx, idx + 1, idx + 2 );
+                    indices[ i - 2 ] = idx;
+                    indices[ i - 1 ] = idx + 1;
+                    indices[ i ] = idx + 2;
                 }
             }
         },
 
         applyDrawArraysTriangleFan: function ( first, count ) {
             var indices = this._indices;
+            indices.length = count - 2;
             var idx0 = first;
-            for ( var i = 2, idx = first + 1; i < count; i++, idx++ ) {
-                indices.push( idx0, idx, idx + 1 );
+            for ( var i = 2, idx = first + 1; i < count; ++i, ++idx ) {
+                indices[ i - 2 ] = idx0;
+                indices[ i - 1 ] = idx;
+                indices[ i ] = idx + 1;
             }
         },
 

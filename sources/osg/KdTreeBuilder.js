@@ -4,12 +4,12 @@ define( [
     'osg/KdTree'
 ], function ( MACROUTILS, NodeVisitor, KdTree ) {
 
-    var KdTreeBuilder = function () {
+    var KdTreeBuilder = function ( options ) {
         NodeVisitor.call( this );
-        this._buildOptions = {
+        this._buildOptions = options !== undefined ? options : {
             _numVerticesProcessed: 0,
-            _targetNumTrianglesPerLeaf: 4,
-            _maxNumLevels: 32
+            _targetNumTrianglesPerLeaf: 20,
+            _maxNumLevels: 12
         };
     };
 
