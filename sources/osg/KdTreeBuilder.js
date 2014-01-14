@@ -8,8 +8,8 @@ define( [
         NodeVisitor.call( this );
         this._buildOptions = options !== undefined ? options : {
             _numVerticesProcessed: 0,
-            _targetNumTrianglesPerLeaf: 20,
-            _maxNumLevels: 12
+            _targetNumTrianglesPerLeaf: 50,
+            _maxNumLevels: 20
         };
     };
 

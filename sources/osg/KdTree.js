@@ -22,19 +22,6 @@ define( [
         this._second = second;
     };
 
-    var Triangle = function ( p0, p1, p2 ) {
-        this._p0 = p0;
-        this._p1 = p1;
-        this._p2 = p2;
-        // bool operator < ( const Triangle & rhs ) const {
-        //     if ( p0 < rhs.p0 ) return true;
-        //     if ( p0 > rhs.p0 ) return false;
-        //     if ( p1 < rhs.p1 ) return true;
-        //     if ( p1 > rhs.p1 ) return false;
-        //     return p2 < rhs.p2;
-        // }
-    };
-
     var IntersectKdTree = function ( vertices, nodes, triangles, intersections, start, end, nodePath ) {
         this._vertices = vertices;
         this._kdNodes = nodes;
@@ -63,258 +50,246 @@ define( [
             if ( d[ 1 ] !== 0.0 ) Vec3.mult( d, 1.0 / d[ 1 ], this._dinvY );
             if ( d[ 2 ] !== 0.0 ) Vec3.mult( d, 1.0 / d[ 2 ], this._dinvZ );
         },
-        intersect: function ( node, ls, le ) {
-            var first = node._first;
-            var second = node._second;
-            var triangles = this._triangles;
-            var vertices = this._vertices;
+        intersect: ( function () {
 
-            if ( first < 0 ) {
-                // treat as a leaf
-                var istart = -first - 1;
-                var iend = istart + second;
-                var d = this._d;
+            var v0 = [ 0.0, 0.0, 0.0 ];
+            var v1 = [ 0.0, 0.0, 0.0 ];
+            var v2 = [ 0.0, 0.0, 0.0 ];
+            var normal = [ 0.0, 0.0, 0.0 ];
+            var e2 = [ 0.0, 0.0, 0.0 ];
+            var e1 = [ 0.0, 0.0, 0.0 ];
+            var tvec = [ 0.0, 0.0, 0.0 ];
+            var pvec = [ 0.0, 0.0, 0.0 ];
+            var qvec = [ 0.0, 0.0, 0.0 ];
 
-                for ( var i = istart; i < iend; ++i ) {
-                    var tri = triangles[ i ];
-                    var iv0 = tri._p0 * 3;
-                    var iv1 = tri._p1 * 3;
-                    var iv2 = tri._p2 * 3;
+            return function ( node, ls, le ) {
+                var first = node._first;
+                var second = node._second;
+                var triangles = this._triangles;
+                var vertices = this._vertices;
 
-                    var v0 = [ vertices[ iv0 ], vertices[ iv0 + 1 ], vertices[ iv0 + 2 ] ];
-                    var v1 = [ vertices[ iv1 ], vertices[ iv1 + 1 ], vertices[ iv1 + 2 ] ];
-                    var v2 = [ vertices[ iv2 ], vertices[ iv2 + 1 ], vertices[ iv2 + 2 ] ];
-
-                    var T = [ 0.0, 0.0, 0.0 ];
-                    Vec3.sub( this._s, v0, T );
-                    var E2 = [ 0.0, 0.0, 0.0 ];
-                    Vec3.sub( v2, v0, E2 );
-                    var E1 = [ 0.0, 0.0, 0.0 ];
-                    Vec3.sub( v1, v0, E1 );
-                    var P = [ 0.0, 0.0, 0.0 ];
-                    Vec3.cross( d, E2, P );
-                    var Q = [ 0.0, 0.0, 0.0 ];
-                    var det = Vec3.dot( P, E1 );
-
-                    var r = 0.0;
-                    var r0 = 0.0;
-                    var r1 = 0.0;
-                    var r2 = 0.0;
-                    var invDet = 0.0;
-                    var t = 0.0;
-                    var u = 0.0;
-                    var v = 0.0;
-
+                if ( first < 0 ) {
+                    // treat as a leaf
+                    var istart = -first - 1;
+                    var iend = istart + second;
+                    var d = this._d;
+                    var len = this._length;
+                    var invLen = this._inverseLength;
+                    var start = this._s;
                     var epsilon = 1E-20;
-                    if ( det > epsilon ) {
-                        u = Vec3.dot( P, T );
-                        if ( u < 0.0 || u > det ) continue;
 
-                        Vec3.cross( T, E1, Q );
-                        v = Vec3.dot( Q, d );
-                        if ( v < 0.0 || v > det ) continue;
+                    for ( var i = istart; i < iend; ++i ) {
+                        var id = i * 3;
+                        var iv0 = triangles[ id ] * 3;
+                        var iv1 = triangles[ id + 1 ] * 3;
+                        var iv2 = triangles[ id + 2 ] * 3;
 
-                        if ( ( u + v ) > det ) continue;
+                        v0[ 0 ] = vertices[ iv0 ];
+                        v0[ 1 ] = vertices[ iv0 + 1 ];
+                        v0[ 2 ] = vertices[ iv0 + 2 ];
 
-                        invDet = 1.0 / det;
-                        t = Vec3.dot( Q, E2 ) * invDet;
-                        if ( t < 0.0 || t > this._length ) continue;
+                        v1[ 0 ] = vertices[ iv1 ];
+                        v1[ 1 ] = vertices[ iv1 + 1 ];
+                        v1[ 2 ] = vertices[ iv1 + 2 ];
 
-                        u *= invDet;
-                        v *= invDet;
+                        v2[ 0 ] = vertices[ iv2 ];
+                        v2[ 1 ] = vertices[ iv2 + 1 ];
+                        v2[ 2 ] = vertices[ iv2 + 2 ];
 
-                        r0 = 1.0 - u - v;
-                        r1 = u;
-                        r2 = v;
-                        r = t * this._inverseLength;
-                    } else if ( det < -epsilon ) {
-                        u = Vec3.dot( P, T );
-                        if ( u > 0.0 || u < det ) continue;
+                        Vec3.sub( v2, v0, e2 );
+                        Vec3.sub( v1, v0, e1 );
+                        Vec3.cross( d, e2, pvec );
 
-                        Vec3.cross( T, E1, Q );
-                        v = Vec3.dot( Q, d );
-                        if ( v > 0.0 || v < det ) continue;
+                        var det = Vec3.dot( pvec, e1 );
+                        if ( det > -epsilon && det < epsilon )
+                            continue;
+                        var invDet = 1.0 / det;
 
-                        if ( ( u + v ) < det ) continue;
+                        Vec3.sub( start, v0, tvec );
 
-                        invDet = 1.0 / det;
-                        t = Vec3.dot( Q, E2 ) * invDet;
-                        if ( t < 0.0 || t > this._length ) continue;
+                        var u = Vec3.dot( pvec, tvec ) * invDet;
+                        if ( u < 0.0 || u > 1.0 )
+                            continue;
 
-                        u *= invDet;
-                        v *= invDet;
+                        Vec3.cross( tvec, e1, qvec );
 
-                        r0 = 1.0 - u - v;
-                        r1 = u;
-                        r2 = v;
-                        r = t * this._inverseLength;
-                    } else {
-                        continue;
+                        var v = Vec3.dot( qvec, d ) * invDet;
+                        if ( v < 0.0 || ( u + v ) > 1.0 )
+                            continue;
+
+                        var t = Vec3.dot( qvec, e2 ) * invDet;
+
+                        if ( t < epsilon || t > len ) //no intersection
+                            continue;
+
+                        var r0 = 1.0 - u - v;
+                        var r1 = u;
+                        var r2 = v;
+                        var r = t * invLen;
+
+                        var interX = v0[ 0 ] * r0 + v1[ 0 ] * r1 + v2[ 0 ] * r2;
+                        var interY = v0[ 1 ] * r0 + v1[ 1 ] * r1 + v2[ 1 ] * r2;
+                        var interZ = v0[ 2 ] * r0 + v1[ 2 ] * r1 + v2[ 2 ] * r2;
+
+                        Vec3.cross( e1, e2, normal );
+                        Vec3.normalize( normal, normal );
+                        this._intersections.push( {
+                            'ratio': r,
+                            'nodepath': this._nodePath.slice( 0 ),
+                            'triangleHit': new TriangleHit( i, normal.slice( 0 ), r0, v0.slice( 0 ), r1, v1.slice( 0 ), r2, v2.slice( 0 ) ),
+                            'point': [ interX, interY, interZ ]
+                        } );
                     }
-
-                    var interX = v0[ 0 ] * r0 + v1[ 0 ] * r1 + v2[ 0 ] * r2;
-                    var interY = v0[ 1 ] * r0 + v1[ 1 ] * r1 + v2[ 1 ] * r2;
-                    var interZ = v0[ 2 ] * r0 + v1[ 2 ] * r1 + v2[ 2 ] * r2;
-                    var inter = [ interX, interY, interZ ];
-
-                    var normal = [ 0.0, 0.0, 0.0 ];
-                    Vec3.cross( E1, E2, normal );
-                    Vec3.normalize( normal, normal );
-
-                    this._intersections.push( {
-                        'ratio': r,
-                        'nodepath': this._nodePath.slice( 0 ),
-                        'triangleHit': new TriangleHit( i, normal, r0, v0, r1, v1, r2, v2 ),
-                        'point': inter
-                    } );
-                }
-            } else {
-                var l = [ 0.0, 0.0, 0.0 ];
-                var e = [ 0.0, 0.0, 0.0 ];
-                Vec3.copy( ls, l );
-                Vec3.copy( le, e );
-                if ( first > 0 ) {
-                    if ( this.intersectAndClip( l, e, this._kdNodes[ first ]._bb ) ) {
-                        this.intersect( this._kdNodes[ first ], l, e );
-                    }
-                }
-                if ( second > 0 ) {
+                } else {
+                    var l = [ 0.0, 0.0, 0.0 ];
+                    var e = [ 0.0, 0.0, 0.0 ];
                     Vec3.copy( ls, l );
                     Vec3.copy( le, e );
-                    if ( this.intersectAndClip( l, e, this._kdNodes[ second ]._bb ) ) {
-                        this.intersect( this._kdNodes[ second ], l, e );
+                    if ( first > 0 ) {
+                        if ( this.intersectAndClip( l, e, this._kdNodes[ first ]._bb ) ) {
+                            this.intersect( this._kdNodes[ first ], l, e );
+                        }
+                    }
+                    if ( second > 0 ) {
+                        Vec3.copy( ls, l );
+                        Vec3.copy( le, e );
+                        if ( this.intersectAndClip( l, e, this._kdNodes[ second ]._bb ) ) {
+                            this.intersect( this._kdNodes[ second ], l, e );
+                        }
                     }
                 }
-            }
-        },
-        intersectAndClip: function ( s, e, bb ) {
-            var min = bb._min;
-            var xmin = min[ 0 ];
-            var ymin = min[ 1 ];
-            var zmin = min[ 2 ];
-
-            var max = bb._max;
-            var xmax = max[ 0 ];
-            var ymax = max[ 1 ];
-            var zmax = max[ 2 ];
-
-            var invX = this._dinvX;
-            var invY = this._dinvY;
-            var invZ = this._dinvZ;
-
+            };
+        } )(),
+        intersectAndClip: ( function () {
             var tmp = [ 0.0, 0.0, 0.0 ];
+            return function ( s, e, bb ) {
+                var min = bb._min;
+                var xmin = min[ 0 ];
+                var ymin = min[ 1 ];
+                var zmin = min[ 2 ];
 
-            if ( s[ 0 ] <= e[ 0 ] ) {
-                // trivial reject of segment wholely outside.
-                if ( e[ 0 ] < xmin ) return false;
-                if ( s[ 0 ] > xmax ) return false;
+                var max = bb._max;
+                var xmax = max[ 0 ];
+                var ymax = max[ 1 ];
+                var zmax = max[ 2 ];
 
-                if ( s[ 0 ] < xmin ) {
-                    // clip s to xMin.
-                    Vec3.mult( invX, xmin - s[ 0 ], tmp );
-                    Vec3.add( s, tmp, s );
+                var invX = this._dinvX;
+                var invY = this._dinvY;
+                var invZ = this._dinvZ;
+
+                if ( s[ 0 ] <= e[ 0 ] ) {
+                    // trivial reject of segment wholely outside.
+                    if ( e[ 0 ] < xmin ) return false;
+                    if ( s[ 0 ] > xmax ) return false;
+
+                    if ( s[ 0 ] < xmin ) {
+                        // clip s to xMin.
+                        Vec3.mult( invX, xmin - s[ 0 ], tmp );
+                        Vec3.add( s, tmp, s );
+                    }
+
+                    if ( e[ 0 ] > xmax ) {
+                        // clip e to xMax.
+                        Vec3.mult( invX, xmax - s[ 0 ], tmp );
+                        Vec3.add( s, tmp, e );
+                    }
+                } else {
+                    if ( s[ 0 ] < xmin ) return false;
+                    if ( e[ 0 ] > xmax ) return false;
+
+                    if ( e[ 0 ] < xmin ) {
+                        // clip s to xMin.
+                        Vec3.mult( invX, xmin - s[ 0 ], tmp );
+                        Vec3.add( s, tmp, e );
+                    }
+
+                    if ( s[ 0 ] > xmax ) {
+                        // clip e to xMax.
+                        Vec3.mult( invX, xmax - s[ 0 ], tmp );
+                        Vec3.add( s, tmp, s );
+                    }
                 }
 
-                if ( e[ 0 ] > xmax ) {
-                    // clip e to xMax.
-                    Vec3.mult( invX, xmax - s[ 0 ], tmp );
-                    Vec3.add( s, tmp, e );
-                }
-            } else {
-                if ( s[ 0 ] < xmin ) return false;
-                if ( e[ 0 ] > xmax ) return false;
+                // compate s and e against the yMin to yMax range of bb.
+                if ( s[ 1 ] <= e[ 1 ] ) {
 
-                if ( e[ 0 ] < xmin ) {
-                    // clip s to xMin.
-                    Vec3.mult( invX, xmin - s[ 0 ], tmp );
-                    Vec3.add( s, tmp, e );
-                }
+                    // trivial reject of segment wholely outside.
+                    if ( e[ 1 ] < ymin ) return false;
+                    if ( s[ 1 ] > ymax ) return false;
 
-                if ( s[ 0 ] > xmax ) {
-                    // clip e to xMax.
-                    Vec3.mult( invX, xmax - s[ 0 ], tmp );
-                    Vec3.add( s, tmp, s );
-                }
-            }
+                    if ( s[ 1 ] < ymin ) {
+                        // clip s to yMin.
+                        Vec3.mult( invY, ymin - s[ 1 ], tmp );
+                        Vec3.add( s, tmp, s );
+                    }
 
-            // compate s and e against the yMin to yMax range of bb.
-            if ( s[ 1 ] <= e[ 1 ] ) {
+                    if ( e[ 1 ] > ymax ) {
+                        // clip e to yMax.
+                        Vec3.mult( invY, ymax - s[ 1 ], tmp );
+                        Vec3.add( s, tmp, e );
+                    }
+                } else {
+                    if ( s[ 1 ] < ymin ) return false;
+                    if ( e[ 1 ] > ymax ) return false;
 
-                // trivial reject of segment wholely outside.
-                if ( e[ 1 ] < ymin ) return false;
-                if ( s[ 1 ] > ymax ) return false;
+                    if ( e[ 1 ] < ymin ) {
+                        // clip s to yMin.
+                        Vec3.mult( invY, ymin - s[ 1 ], tmp );
+                        Vec3.add( s, tmp, e );
+                    }
 
-                if ( s[ 1 ] < ymin ) {
-                    // clip s to yMin.
-                    Vec3.mult( invY, ymin - s[ 1 ], tmp );
-                    Vec3.add( s, tmp, s );
-                }
-
-                if ( e[ 1 ] > ymax ) {
-                    // clip e to yMax.
-                    Vec3.mult( invY, ymax - s[ 1 ], tmp );
-                    Vec3.add( s, tmp, e );
-                }
-            } else {
-                if ( s[ 1 ] < ymin ) return false;
-                if ( e[ 1 ] > ymax ) return false;
-
-                if ( e[ 1 ] < ymin ) {
-                    // clip s to yMin.
-                    Vec3.mult( invY, ymin - s[ 1 ], tmp );
-                    Vec3.add( s, tmp, e );
+                    if ( s[ 1 ] > ymax ) {
+                        // clip e to yMax.
+                        Vec3.mult( invY, ymax - s[ 1 ], tmp );
+                        Vec3.add( s, tmp, s );
+                    }
                 }
 
-                if ( s[ 1 ] > ymax ) {
-                    // clip e to yMax.
-                    Vec3.mult( invY, ymax - s[ 1 ], tmp );
-                    Vec3.add( s, tmp, s );
-                }
-            }
+                // compate s and e against the zMin to zMax range of bb.
+                if ( s[ 2 ] <= e[ 2 ] ) {
+                    // trivial reject of segment wholely outside.
+                    if ( e[ 2 ] < zmin ) return false;
+                    if ( s[ 2 ] > zmax ) return false;
 
-            // compate s and e against the zMin to zMax range of bb.
-            if ( s[ 2 ] <= e[ 2 ] ) {
-                // trivial reject of segment wholely outside.
-                if ( e[ 2 ] < zmin ) return false;
-                if ( s[ 2 ] > zmax ) return false;
+                    if ( s[ 2 ] < zmin ) {
+                        // clip s to zMin.
+                        Vec3.mult( invZ, zmin - s[ 2 ], tmp );
+                        Vec3.add( s, tmp, s );
+                    }
 
-                if ( s[ 2 ] < zmin ) {
-                    // clip s to zMin.
-                    Vec3.mult( invZ, zmin - s[ 2 ], tmp );
-                    Vec3.add( s, tmp, s );
-                }
+                    if ( e[ 2 ] > zmax ) {
+                        // clip e to zMax.
+                        Vec3.mult( invZ, zmax - s[ 2 ], tmp );
+                        Vec3.add( s, tmp, e );
+                    }
+                } else {
+                    if ( s[ 2 ] < zmin ) return false;
+                    if ( e[ 2 ] > zmax ) return false;
 
-                if ( e[ 2 ] > zmax ) {
-                    // clip e to zMax.
-                    Vec3.mult( invZ, zmax - s[ 2 ], tmp );
-                    Vec3.add( s, tmp, e );
-                }
-            } else {
-                if ( s[ 2 ] < zmin ) return false;
-                if ( e[ 2 ] > zmax ) return false;
+                    if ( e[ 2 ] < zmin ) {
+                        // clip s to zMin.
+                        Vec3.mult( invZ, zmin - s[ 2 ], tmp );
+                        Vec3.add( s, tmp, e );
+                    }
 
-                if ( e[ 2 ] < zmin ) {
-                    // clip s to zMin.
-                    Vec3.mult( invZ, zmin - s[ 2 ], tmp );
-                    Vec3.add( s, tmp, e );
+                    if ( s[ 2 ] > zmax ) {
+                        // clip e to zMax.
+                        Vec3.mult( invZ, zmax - s[ 2 ], tmp );
+                        Vec3.add( s, tmp, s );
+                    }
                 }
-
-                if ( s[ 2 ] > zmax ) {
-                    // clip e to zMax.
-                    Vec3.mult( invZ, zmax - s[ 2 ], tmp );
-                    Vec3.add( s, tmp, s );
-                }
-            }
-            return true;
-        }
+                return true;
+            };
+        } )()
     };
 
     var BuildKdTree = function ( kdTree ) {
         this._kdTree = kdTree;
         this._bb = new BoundingBox();
-        this._axisStack = [];
-        this._primitiveIndices = [];
-        this._centers = [];
+        this._primitiveIndices = null; // Uint32Array
+        this._centers = null; // Float32Array
+        this._axisOrder = [ 0, 0, 0 ];
+        this._stackLength = 0;
     };
 
     BuildKdTree.prototype = {
@@ -333,12 +308,11 @@ define( [
             this._bb.copy( geom.getBoundingBox() );
             this._kdTree.setVertices( vertices );
 
-            //compute divisions
             this.computeDivisions( options );
-
             options._numVerticesProcessed += nbVertices;
 
-            //compute triangles (triangle fan, strip, drawArrays...)
+            // compute triangles (triangle fan, strip, drawArrays...)
+            // this is the most expansive function for building kdtree
             this.computeTriangles( geom );
 
             var node = new KdNode( -1, this._primitiveIndices.length );
@@ -347,32 +321,40 @@ define( [
 
             var bb = new BoundingBox();
             bb.copy( this._bb );
+            // second most expansive
             nodeNum = this.divide( options, bb, nodeNum, 0 );
 
             var triangles = this._kdTree.getTriangles();
-            var triangleList = [];
             var primitives = this._primitiveIndices;
             var nbPrimitives = primitives.length;
-            for ( var i = 0; i < nbPrimitives; ++i ) {
-                triangleList.push( triangles[ primitives[ i ] ] );
+            var triangleOrdered = new MACROUTILS.Float32Array( triangles.length );
+            for ( var i = 0, j = 0; i < nbPrimitives; ++i, j += 3 ) {
+                var id = primitives[ i ] * 3;
+                triangleOrdered[ j ] = triangles[ id ];
+                triangleOrdered[ j + 1 ] = triangles[ id + 1 ];
+                triangleOrdered[ j + 2 ] = triangles[ id + 2 ];
             }
-            this._kdTree.setTriangles( triangleList );
+            this._kdTree.setTriangles( triangleOrdered );
 
             return this._kdTree.getNodes().length > 0;
         },
         computeTriangles: function ( geom ) {
             var tb = new TriangleBuilder( geom );
             tb.apply();
-            var indices = tb._indices;
 
-            var centers = this._centers;
+            var indices = tb._indices;
+            var nbTriangles = indices.length;
+
             var kdTree = this._kdTree;
             var vertices = kdTree.getVertices();
+            kdTree.setTriangles( indices );
 
-            var bb = new BoundingBox();
-            var nbTriangles = indices.length;
+            this._centers = new MACROUTILS.Float32Array( nbTriangles );
+            var centers = this._centers;
+            this._primitiveIndices = new MACROUTILS.Int32Array( nbTriangles / 3 );
             var primitives = this._primitiveIndices;
-            for ( var i = 0; i < nbTriangles; i += 3 ) {
+
+            for ( var i = 0, j = 0; i < nbTriangles; i += 3, ++j ) {
                 var iv0 = indices[ i ];
                 var iv1 = indices[ i + 1 ];
                 var iv2 = indices[ i + 2 ];
@@ -381,86 +363,76 @@ define( [
                 if ( iv0 === iv1 || iv1 === iv2 || iv0 === iv2 )
                     return;
 
-                var id = kdTree.addTriangle( new Triangle( iv0, iv1, iv2 ) );
                 iv0 *= 3;
                 iv1 *= 3;
                 iv2 *= 3;
-                var v0 = [ vertices[ iv0 ], vertices[ iv0 + 1 ], vertices[ iv0 + 2 ] ];
-                var v1 = [ vertices[ iv1 ], vertices[ iv1 + 1 ], vertices[ iv1 + 2 ] ];
-                var v2 = [ vertices[ iv2 ], vertices[ iv2 + 1 ], vertices[ iv2 + 2 ] ];
 
-                bb.init();
-                bb.expandByVec3( v0 );
-                bb.expandByVec3( v1 );
-                bb.expandByVec3( v2 );
+                var v0x = vertices[ iv0 ];
+                var v0y = vertices[ iv0 + 1 ];
+                var v0z = vertices[ iv0 + 2 ];
 
-                centers.push( bb.center() );
-                primitives.push( id );
+                var v1x = vertices[ iv1 ];
+                var v1y = vertices[ iv1 + 1 ];
+                var v1z = vertices[ iv1 + 2 ];
+
+                var v2x = vertices[ iv2 ];
+                var v2y = vertices[ iv2 + 1 ];
+                var v2z = vertices[ iv2 + 2 ];
+
+                var minx = Math.min( v0x, Math.min( v1x, v2x ) );
+                var miny = Math.min( v0y, Math.min( v1y, v2y ) );
+                var minz = Math.min( v0z, Math.min( v1z, v2z ) );
+
+                var maxx = Math.max( v0x, Math.max( v1x, v2x ) );
+                var maxy = Math.max( v0y, Math.max( v1y, v2y ) );
+                var maxz = Math.max( v0z, Math.max( v1z, v2z ) );
+                centers[ i ] = ( minx + maxx ) * 0.5;
+                centers[ i + 1 ] = ( miny + maxy ) * 0.5;
+                centers[ i + 2 ] = ( minz + maxz ) * 0.5;
+                primitives[ j ] = j;
             }
         },
         computeDivisions: function ( options ) {
-            var maxLevels = options._maxNumLevels;
-            var axisStack = this._axisStack;
-            var dimensions = Vec3.sub( this._bb._max, this._bb._min, [ 0.0, 0.0, 0.0 ] );
-            for ( var level = 0; level < maxLevels; ++level ) {
-                var axis = 0;
-                if ( dimensions[ 0 ] >= dimensions[ 1 ] ) {
-                    if ( dimensions[ 0 ] >= dimensions[ 2 ] ) axis = 0;
-                    else axis = 2;
-                } else if ( dimensions[ 1 ] >= dimensions[ 2 ] ) axis = 1;
-                else axis = 2;
-                axisStack.push( axis );
-                dimensions[ axis ] *= 0.5;
-            }
+            this._stackLength = options._maxNumLevels;
+            var max = this._bb._max;
+            var min = this._bb._min;
+            var dx = max[ 0 ] - min[ 0 ];
+            var dy = max[ 1 ] - min[ 1 ];
+            var dz = max[ 2 ] - min[ 2 ];
+            var axisOrder = this._axisOrder;
+
+            // We set the cutting order (longest edge aabb first)
+            axisOrder[ 0 ] = ( dx >= dy && dx >= dz ) ? 0 : ( dy >= dz ) ? 1 : 2;
+            axisOrder[ 2 ] = ( dx < dy && dx < dz ) ? 0 : ( dy < dz ) ? 1 : 2;
+            var sum = axisOrder[ 0 ] + axisOrder[ 2 ];
+            axisOrder[ 1 ] = sum === 3 ? 0 : sum === 2 ? 1 : 2;
         },
         divide: function ( options, bb, nodeIndex, level ) {
             var kdTree = this._kdTree;
-            var vertices = kdTree.getVertices();
             var primitives = this._primitiveIndices;
-            var node = kdTree.getNode( nodeIndex );
+            var nodes = kdTree.getNodes();
+            var node = nodes[ nodeIndex ];
 
             var first = node._first;
             var second = node._second;
 
-            var needToDivide = level < this._axisStack.length && first < 0 && second > options._targetNumTrianglesPerLeaf;
+            var needToDivide = level < this._stackLength && first < 0 && second > options._targetNumTrianglesPerLeaf;
             var istart = -first - 1;
             var iend = istart + second - 1;
 
             if ( !needToDivide ) {
                 if ( first < 0 ) {
-                    //     // leaf is done, now compute bound on it.
-                    var bnode = node._bb;
-                    bnode.init();
-                    for ( var i = istart; i <= iend; ++i ) {
-                        var tri = kdTree.getTriangle( primitives[ i ] );
-                        var iv0 = tri._p0 * 3;
-                        var iv1 = tri._p1 * 3;
-                        var iv2 = tri._p2 * 3;
-                        bnode.expandByVec3( [ vertices[ iv0 ], vertices[ iv0 + 1 ], vertices[ iv0 + 2 ] ] );
-                        bnode.expandByVec3( [ vertices[ iv1 ], vertices[ iv1 + 1 ], vertices[ iv1 + 2 ] ] );
-                        bnode.expandByVec3( [ vertices[ iv2 ], vertices[ iv2 + 1 ], vertices[ iv2 + 2 ] ] );
-                    }
-                    if ( bnode.valid() ) {
-                        var epsilon = 1E-6;
-                        var bmin = bnode._min;
-                        var bmax = bnode._max;
-                        bmin[ 0 ] -= epsilon;
-                        bmin[ 1 ] -= epsilon;
-                        bmin[ 2 ] -= epsilon;
-                        bmax[ 0 ] += epsilon;
-                        bmax[ 1 ] += epsilon;
-                        bmax[ 2 ] += epsilon;
-                    }
+                    // leaf is done, now compute bound on it.
+                    this.computeNodeBox( node, istart, iend );
                 }
                 return nodeIndex;
             }
 
-
             if ( first >= 0 )
                 return nodeIndex;
-            // leaf node as first <= 0, so look at dividing it.
+            // leaf node as first < 0, so look at dividing it.
 
-            var axis = this._axisStack[ level ];
+            var axis = this._axisOrder[ level % 3 ];
             var originalMin = bb._min[ axis ];
             var originalMax = bb._max[ axis ];
 
@@ -475,15 +447,15 @@ define( [
 
             var centers = this._centers;
             while ( left < right ) {
-                while ( left < right && ( centers[ primitives[ left ] ][ axis ] <= mid ) ) {
+                while ( left < right && ( centers[ primitives[ left ] * 3 + axis ] <= mid ) ) {
                     ++left;
                 }
 
-                while ( left < right && ( centers[ primitives[ right ] ][ axis ] > mid ) ) {
+                while ( left < right && ( centers[ primitives[ right ] * 3 + axis ] > mid ) ) {
                     --right;
                 }
 
-                while ( left < right && ( centers[ primitives[ right ] ][ axis ] > mid ) ) {
+                while ( left < right && ( centers[ primitives[ right ] * 3 + axis ] > mid ) ) {
                     --right;
                 }
 
@@ -497,7 +469,7 @@ define( [
             }
 
             if ( left === right ) {
-                if ( centers[ primitives[ left ] ][ axis ] <= mid )++left;
+                if ( centers[ primitives[ left ] * 3 + axis ] <= mid )++left;
                 else --right;
             }
 
@@ -533,27 +505,71 @@ define( [
             bb._min[ axis ] = restore;
 
             if ( !insitueDivision ) {
-                // take a second reference to node we are working on as the std::vector<> resize could
-                // have invalidate the previous node ref.
-                var newNodeRef = kdTree.getNode( nodeIndex );
-
-                newNodeRef._first = leftChildIndex;
-                newNodeRef._second = rightChildIndex;
+                node._first = leftChildIndex;
+                node._second = rightChildIndex;
 
                 insitueDivision = true;
 
-                newNodeRef._bb.init();
-                if ( leftChildIndex !== 0 ) newNodeRef._bb.expandByBoundingBox( kdTree.getNode( leftChildIndex )._bb );
-                if ( rightChildIndex !== 0 ) newNodeRef._bb.expandByBoundingBox( kdTree.getNode( rightChildIndex )._bb );
+                var bnode = node._bb;
+                bnode.init();
+                if ( leftChildIndex !== 0 ) bnode.expandByBoundingBox( nodes[ leftChildIndex ]._bb );
+                if ( rightChildIndex !== 0 ) bnode.expandByBoundingBox( nodes[ rightChildIndex ]._bb );
             }
             return nodeIndex;
+        },
+        computeNodeBox: function ( node, istart, iend ) {
+            var minx = Infinity,
+                miny = Infinity,
+                minz = Infinity,
+                maxx = -Infinity,
+                maxy = -Infinity,
+                maxz = -Infinity;
+            var triangles = this._kdTree.getTriangles();
+            var vertices = this._kdTree.getVertices();
+            var primitives = this._primitiveIndices;
+            for ( var i = istart; i <= iend; ++i ) {
+                var id = primitives[ i ] * 3;
+                var iv0 = triangles[ id ] * 3;
+                var iv1 = triangles[ id + 1 ] * 3;
+                var iv2 = triangles[ id + 2 ] * 3;
+
+                var v0x = vertices[ iv0 ];
+                var v0y = vertices[ iv0 + 1 ];
+                var v0z = vertices[ iv0 + 2 ];
+
+                var v1x = vertices[ iv1 ];
+                var v1y = vertices[ iv1 + 1 ];
+                var v1z = vertices[ iv1 + 2 ];
+
+                var v2x = vertices[ iv2 ];
+                var v2y = vertices[ iv2 + 1 ];
+                var v2z = vertices[ iv2 + 2 ];
+
+                minx = Math.min( minx, Math.min( v0x, Math.min( v1x, v2x ) ) );
+                miny = Math.min( miny, Math.min( v0y, Math.min( v1y, v2y ) ) );
+                minz = Math.min( minz, Math.min( v0z, Math.min( v1z, v2z ) ) );
+
+                maxx = Math.max( maxx, Math.max( v0x, Math.max( v1x, v2x ) ) );
+                maxy = Math.max( maxy, Math.max( v0y, Math.max( v1y, v2y ) ) );
+                maxz = Math.max( maxz, Math.max( v0z, Math.max( v1z, v2z ) ) );
+            }
+            var epsilon = 1E-6;
+            var bnode = node._bb;
+            var bmin = bnode._min;
+            var bmax = bnode._max;
+            bmin[ 0 ] = minx - epsilon;
+            bmin[ 1 ] = miny - epsilon;
+            bmin[ 2 ] = minz - epsilon;
+            bmax[ 0 ] = maxx + epsilon;
+            bmax[ 1 ] = maxy + epsilon;
+            bmax[ 2 ] = maxz + epsilon;
         }
     };
 
     var KdTree = function () {
         this._vertices = null;
         this._kdNodes = [];
-        this._triangles = [];
+        this._triangles = null; // Float32Array
     };
 
     KdTree.prototype = MACROUTILS.objectLibraryClass( {
@@ -565,16 +581,6 @@ define( [
         },
         getNodes: function () {
             return this._kdNodes;
-        },
-        getNode: function ( nodeNum ) {
-            return this._kdNodes[ nodeNum ];
-        },
-        addTriangle: function ( tri ) {
-            this._triangles.push( tri );
-            return this._triangles.length - 1;
-        },
-        getTriangle: function ( num ) {
-            return this._triangles[ num ];
         },
         getTriangles: function () {
             return this._triangles;
@@ -597,7 +603,7 @@ define( [
 
             var numIntersectionsBefore = intersections.length;
             var intersector = new IntersectKdTree( this._vertices, this._kdNodes, this._triangles, intersections, start, end, nodePath );
-            intersector.intersect( this.getNode( 0 ), start, end );
+            intersector.intersect( this.getNodes()[ 0 ], start, end );
 
             return numIntersectionsBefore !== intersections.length;
         }

@@ -1,26 +1,27 @@
 define( [
     'osg/Notify',
     'osg/Vec3',
-    'osg/PrimitiveSet'
-], function ( Notify, Vec3, PrimitiveSet ) {
+    'osg/PrimitiveSet',
+    'osg/Utils'
+], function ( Notify, Vec3, PrimitiveSet, MACROUTILS ) {
 
     var TriangleBuilder = function ( geom ) {
         this._geom = geom;
-        this._indices = [];
+        this._indices = null; // MACROUTILS.Float32Array
     };
 
-    // XXX Use typed array maybe?
+    // #FIXME Use typed array maybe?
     TriangleBuilder.prototype = {
         applyDrawElementsTriangles: function ( count, indexes ) {
+            this._indices = new MACROUTILS.Float32Array( count );
             var indices = this._indices;
-            indices.length = count;
             for ( var i = 0; i < count; ++i )
                 indices[ i ] = indexes[ i ];
         },
 
         applyDrawElementsTriangleStrip: function ( count, indexes ) {
+            this._indices = new MACROUTILS.Float32Array( count - 2 );
             var indices = this._indices;
-            indices.length = count - 2;
             for ( var i = 2, idx = 0; i < count; ++i, ++idx ) {
                 if ( i % 2 ) {
                     indices[ i - 2 ] = indexes[ idx ];
@@ -35,8 +36,8 @@ define( [
         },
 
         applyDrawElementsTriangleFan: function ( count, indexes ) {
+            this._indices = new MACROUTILS.Float32Array( count - 2 );
             var indices = this._indices;
-            indices.length = count - 2;
             var idx0 = indexes[ 0 ];
             for ( var i = 2, idx = 1; i < count; ++i, ++idx ) {
                 indices[ i - 2 ] = indexes[ idx0 ];
@@ -46,16 +47,16 @@ define( [
         },
 
         applyDrawArraysTriangles: function ( first, count ) {
+            this._indices = new MACROUTILS.Float32Array( count - first );
             var indices = this._indices;
-            indices.length = count - first;
             for ( var i = 0, idx = first; i < count; ++i, ++idx ) {
                 indices[ i ] = idx;
             }
         },
 
         applyDrawArraysTriangleStrip: function ( first, count ) {
+            this._indices = new MACROUTILS.Float32Array( count - 2 );
             var indices = this._indices;
-            indices.length = count - 2;
             for ( var i = 2, idx = first; i < count; ++i, ++idx ) {
                 if ( i % 2 ) {
                     indices[ i - 2 ] = idx;
@@ -70,8 +71,8 @@ define( [
         },
 
         applyDrawArraysTriangleFan: function ( first, count ) {
+            this._indices = new MACROUTILS.Float32Array( count - 2 );
             var indices = this._indices;
-            indices.length = count - 2;
             var idx0 = first;
             for ( var i = 2, idx = first + 1; i < count; ++i, ++idx ) {
                 indices[ i - 2 ] = idx0;

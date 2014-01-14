@@ -546,6 +546,9 @@ define( [
         var fullUVList = [];
         var indexes = [];
         var vtxCount = 0;
+        // #FIXME quick fix to enable bigger mesh
+        // however we should check if the OES_element_index_uint
+        // has been enabled
         var useDrawArrays = ( allVertices.length / 3 ) >= 65536;
 
         for ( y = 0; y < segmentsY; y++ ) {
