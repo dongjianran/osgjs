@@ -63,28 +63,38 @@ define( [
             var v1 = [];
             var v2 = [];
 
-            var idx0, idx1, idx2;
-            for ( var i = 2, idx = 0; i < count; i++, idx++ ) {
+            var idx = 0;
+            var a = 0;
+            var b = 0;
+            var c = 0;
+            for ( var i = 2; i < count; ++i ) {
+                idx = i - 2;
                 if ( i % 2 ) {
-                    idx0 = indexes[ idx ] * 3;
-                    idx1 = indexes[ idx + 2 ] * 3;
-                    idx2 = indexes[ idx + 1 ] * 3;
+                    a = indexes[ idx ];
+                    b = indexes[ idx + 2 ];
+                    c = indexes[ idx + 1 ];
                 } else {
-                    idx0 = indexes[ idx ] * 3;
-                    idx1 = indexes[ idx + 1 ] * 3;
-                    idx2 = indexes[ idx + 2 ] * 3;
+                    a = indexes[ idx ];
+                    b = indexes[ idx + 1 ];
+                    c = indexes[ idx + 2 ];
                 }
-                v0[ 0 ] = vertexes[ idx0 ];
-                v0[ 1 ] = vertexes[ idx0 + 1 ];
-                v0[ 2 ] = vertexes[ idx0 + 2 ];
+                if ( a === b || b === c || a === c ) {
+                    continue;
+                }
+                a *= 3;
+                b *= 3;
+                c *= 3;
+                v0[ 0 ] = vertexes[ a ];
+                v0[ 1 ] = vertexes[ a + 1 ];
+                v0[ 2 ] = vertexes[ a + 2 ];
 
-                v1[ 0 ] = vertexes[ idx1 ];
-                v1[ 1 ] = vertexes[ idx1 + 1 ];
-                v1[ 2 ] = vertexes[ idx1 + 2 ];
+                v1[ 0 ] = vertexes[ b ];
+                v1[ 1 ] = vertexes[ b + 1 ];
+                v1[ 2 ] = vertexes[ b + 2 ];
 
-                v2[ 0 ] = vertexes[ idx2 ];
-                v2[ 1 ] = vertexes[ idx2 + 1 ];
-                v2[ 2 ] = vertexes[ idx2 + 2 ];
+                v2[ 0 ] = vertexes[ c ];
+                v2[ 1 ] = vertexes[ c + 1 ];
+                v2[ 2 ] = vertexes[ c + 2 ];
                 this.intersect( v0, v1, v2 );
             }
         },
@@ -121,7 +131,7 @@ define( [
             var v2 = [];
 
             var bufFirst = first * 3;
-            var bufCount = count * 3;
+            var bufCount = bufFirst + count * 3;
             for ( var idx = bufFirst; idx < bufCount; idx += 9 ) {
                 v0[ 0 ] = vertexes[ idx ];
                 v0[ 1 ] = vertexes[ idx + 1 ];
@@ -143,28 +153,39 @@ define( [
             var v1 = [];
             var v2 = [];
 
-            var idx0, idx1, idx2;
-            for ( var i = 2, idx = first; i < count; i++, idx++ ) {
+            var idx = 0;
+            var offset = first - 2;
+            var a = 0;
+            var b = 0;
+            var c = 0;
+            for ( var i = 2; i < count; ++i ) {
+                idx = offset + i;
                 if ( i % 2 ) {
-                    idx0 = idx * 3;
-                    idx1 = ( idx + 2 ) * 3;
-                    idx2 = ( idx + 1 ) * 3;
+                    a = idx;
+                    b = idx + 2;
+                    c = idx + 1;
                 } else {
-                    idx0 = idx * 3;
-                    idx1 = ( idx + 1 ) * 3;
-                    idx2 = ( idx + 2 ) * 3;
+                    a = idx;
+                    b = idx + 1;
+                    c = idx + 2;
                 }
-                v0[ 0 ] = vertexes[ idx0 ];
-                v0[ 1 ] = vertexes[ idx0 + 1 ];
-                v0[ 2 ] = vertexes[ idx0 + 2 ];
+                if ( a === b || b === c || a === c ) {
+                    continue;
+                }
+                a *= 3;
+                b *= 3;
+                c *= 3;
+                v0[ 0 ] = vertexes[ a ];
+                v0[ 1 ] = vertexes[ a + 1 ];
+                v0[ 2 ] = vertexes[ a + 2 ];
 
-                v1[ 0 ] = vertexes[ idx1 ];
-                v1[ 1 ] = vertexes[ idx1 + 1 ];
-                v1[ 2 ] = vertexes[ idx1 + 2 ];
+                v1[ 0 ] = vertexes[ b ];
+                v1[ 1 ] = vertexes[ b + 1 ];
+                v1[ 2 ] = vertexes[ b + 2 ];
 
-                v2[ 0 ] = vertexes[ idx2 ];
-                v2[ 1 ] = vertexes[ idx2 + 1 ];
-                v2[ 2 ] = vertexes[ idx2 + 2 ];
+                v2[ 0 ] = vertexes[ b ];
+                v2[ 1 ] = vertexes[ b + 1 ];
+                v2[ 2 ] = vertexes[ b + 2 ];
                 this.intersect( v0, v1, v2 );
             }
         },

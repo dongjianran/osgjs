@@ -13,77 +13,111 @@ define( [
     TriangleBuilder.prototype = {
         applyDrawElementsTriangles: function ( count, indexes, startId ) {
             var indices = this._indices;
-            count += startId;
-            for ( var i = startId, idx = 0; i < count; ++i, ++idx )
-                indices[ i ] = indexes[ idx ];
-            return count;
+            for ( var i = 0; i < count; ++i )
+                indices[ startId + i ] = indexes[ i ];
+            return startId + count;
         },
 
         applyDrawElementsTriangleStrip: function ( count, indexes, startId ) {
             var indices = this._indices;
-            count += startId;
-            for ( var i = startId + 2, idx = 0; i < count; ++i, ++idx ) {
-                if ( ( i - startId ) % 2 ) {
-                    indices[ i - 2 ] = indexes[ idx ];
-                    indices[ i - 1 ] = indexes[ idx + 2 ];
-                    indices[ i ] = indexes[ idx + 1 ];
+            var idx = 0;
+            var id = 0;
+            var a = 0;
+            var b = 0;
+            var c = 0;
+            var nbDegen = 0;
+            for ( var i = 2; i < count; ++i ) {
+                idx = i - 2;
+                if ( i % 2 ) {
+                    a = indexes[ idx ];
+                    b = indexes[ idx + 2 ];
+                    c = indexes[ idx + 1 ];
                 } else {
-                    indices[ i - 2 ] = indexes[ idx ];
-                    indices[ i - 1 ] = indexes[ idx + 1 ];
-                    indices[ i ] = indexes[ idx + 2 ];
+                    a = indexes[ idx ];
+                    b = indexes[ idx + 1 ];
+                    c = indexes[ idx + 2 ];
                 }
+                if ( a === b || b === c || a === c ) {
+                    ++nbDegen;
+                    continue;
+                }
+                id = startId + ( idx - nbDegen ) * 3;
+                indices[ id ] = a;
+                indices[ id + 1 ] = b;
+                indices[ id + 2 ] = c;
             }
-            return count - 2;
+            return startId + ( count - 2 - nbDegen ) * 3;
         },
 
         applyDrawElementsTriangleFan: function ( count, indexes, startId ) {
             var indices = this._indices;
             var idx0 = indexes[ 0 ];
-            count += startId;
-            for ( var i = startId + 2, idx = 1; i < count; ++i, ++idx ) {
-                indices[ i - 2 ] = indexes[ idx0 ];
-                indices[ i - 1 ] = indexes[ idx ];
-                indices[ i ] = indexes[ idx + 1 ];
+            var id = 0;
+            for ( var i = 2; i < count; ++i ) {
+                var idx = i - 1;
+                id = startId + ( i - 2 ) * 3;
+                indices[ id ] = idx0;
+                indices[ id + 1 ] = indexes[ idx ];
+                indices[ id + 2 ] = indexes[ idx + 1 ];
             }
-            return count - 2;
+            return startId + ( count - 2 ) * 3;
         },
 
         applyDrawArraysTriangles: function ( first, count, startId ) {
             var indices = this._indices;
-            count += startId;
-            for ( var i = startId, idx = first; i < count; ++i, ++idx ) {
-                indices[ i ] = idx;
+            for ( var i = 0; i < count; ++i ) {
+                indices[ startId + i ] = first + i;
             }
-            return count;
+            return startId + count;
         },
 
         applyDrawArraysTriangleStrip: function ( first, count, startId ) {
             var indices = this._indices;
-            count += startId;
-            for ( var i = startId + 2, idx = first; i < count; ++i, ++idx ) {
-                if ( ( i - startId ) % 2 ) {
-                    indices[ i - 2 ] = idx;
-                    indices[ i - 1 ] = idx + 2;
-                    indices[ i ] = idx + 1;
+            var idx = 0;
+            var id = 0;
+            var offset = first - 2;
+            var a = 0;
+            var b = 0;
+            var c = 0;
+            var nbDegen = 0;
+            for ( var i = 2; i < count; ++i ) {
+                idx = offset + i;
+                if ( i % 2 ) {
+                    a = idx;
+                    b = idx + 2;
+                    c = idx + 1;
                 } else {
-                    indices[ i - 2 ] = idx;
-                    indices[ i - 1 ] = idx + 1;
-                    indices[ i ] = idx + 2;
+                    a = idx;
+                    b = idx + 1;
+                    c = idx + 2;
                 }
+                if ( a === b || b === c || a === c ) {
+                    ++nbDegen;
+                    continue;
+                }
+                id = startId + ( i - 2 - nbDegen ) * 3;
+                indices[ id ] = a;
+                indices[ id + 1 ] = b;
+                indices[ id + 2 ] = c;
+
             }
-            return count - 2;
+            return startId + ( count - 2 - nbDegen ) * 3;
         },
 
         applyDrawArraysTriangleFan: function ( first, count, startId ) {
             var indices = this._indices;
             var idx0 = first;
-            count += startId;
-            for ( var i = startId + 2, idx = first + 1; i < count; ++i, ++idx ) {
-                indices[ i - 2 ] = idx0;
-                indices[ i - 1 ] = idx;
-                indices[ i ] = idx + 1;
+            var idx = 0;
+            var id = 0;
+            var offset = first - 1;
+            for ( var i = 2; i < count; ++i ) {
+                idx = offset + i;
+                id = startId + ( i - 2 ) * 3;
+                indices[ id ] = idx0;
+                indices[ id + 1 ] = idx;
+                indices[ id + 2 ] = idx + 1;
             }
-            return count - 2;
+            return startId + ( count - 2 ) * 3;
         },
 
         apply: function () {
@@ -96,7 +130,11 @@ define( [
             var i = 0;
             for ( i = 0; i < nbPrimitives; i++ ) {
                 var prim = primitives[ i ];
-                totalLenArray += prim.getMode() === prim ? prim.getCount() : prim.getCount() - 2;
+                var mode = prim.getMode();
+                if ( mode === PrimitiveSet.TRIANGLES )
+                    totalLenArray += prim.getCount();
+                else
+                    totalLenArray += ( prim.getCount() - 2 ) * 3;
             }
             this._indices = new MACROUTILS.Uint32Array( totalLenArray );
             var startId = 0;
@@ -130,6 +168,7 @@ define( [
                     }
                 }
             }
+            this._indices = this._indices.subarray( 0, startId );
         }
     };
 
