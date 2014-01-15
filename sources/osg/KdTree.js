@@ -327,7 +327,7 @@ define( [
             var triangles = this._kdTree.getTriangles();
             var primitives = this._primitiveIndices;
             var nbPrimitives = primitives.length;
-            var triangleOrdered = new MACROUTILS.Float32Array( triangles.length );
+            var triangleOrdered = new MACROUTILS.Uint32Array( triangles.length );
             for ( var i = 0, j = 0; i < nbPrimitives; ++i, j += 3 ) {
                 var id = primitives[ i ] * 3;
                 triangleOrdered[ j ] = triangles[ id ];
@@ -351,7 +351,7 @@ define( [
 
             this._centers = new MACROUTILS.Float32Array( nbTriangles );
             var centers = this._centers;
-            this._primitiveIndices = new MACROUTILS.Int32Array( nbTriangles / 3 );
+            this._primitiveIndices = new MACROUTILS.Uint32Array( nbTriangles / 3 );
             var primitives = this._primitiveIndices;
 
             for ( var i = 0, j = 0; i < nbTriangles; i += 3, ++j ) {

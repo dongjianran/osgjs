@@ -7,23 +7,23 @@ define( [
 
     var TriangleBuilder = function ( geom ) {
         this._geom = geom;
-        this._indices = null; // MACROUTILS.Float32Array
+        this._indices = null; // MACROUTILS.Uint32Array
     };
 
-    // #FIXME Use typed array maybe?
     TriangleBuilder.prototype = {
-        applyDrawElementsTriangles: function ( count, indexes ) {
-            this._indices = new MACROUTILS.Float32Array( count );
+        applyDrawElementsTriangles: function ( count, indexes, startId ) {
             var indices = this._indices;
-            for ( var i = 0; i < count; ++i )
-                indices[ i ] = indexes[ i ];
+            count += startId;
+            for ( var i = startId, idx = 0; i < count; ++i, ++idx )
+                indices[ i ] = indexes[ idx ];
+            return count;
         },
 
-        applyDrawElementsTriangleStrip: function ( count, indexes ) {
-            this._indices = new MACROUTILS.Float32Array( count - 2 );
+        applyDrawElementsTriangleStrip: function ( count, indexes, startId ) {
             var indices = this._indices;
-            for ( var i = 2, idx = 0; i < count; ++i, ++idx ) {
-                if ( i % 2 ) {
+            count += startId;
+            for ( var i = startId + 2, idx = 0; i < count; ++i, ++idx ) {
+                if ( ( i - startId ) % 2 ) {
                     indices[ i - 2 ] = indexes[ idx ];
                     indices[ i - 1 ] = indexes[ idx + 2 ];
                     indices[ i ] = indexes[ idx + 1 ];
@@ -33,32 +33,35 @@ define( [
                     indices[ i ] = indexes[ idx + 2 ];
                 }
             }
+            return count - 2;
         },
 
-        applyDrawElementsTriangleFan: function ( count, indexes ) {
-            this._indices = new MACROUTILS.Float32Array( count - 2 );
+        applyDrawElementsTriangleFan: function ( count, indexes, startId ) {
             var indices = this._indices;
             var idx0 = indexes[ 0 ];
-            for ( var i = 2, idx = 1; i < count; ++i, ++idx ) {
+            count += startId;
+            for ( var i = startId + 2, idx = 1; i < count; ++i, ++idx ) {
                 indices[ i - 2 ] = indexes[ idx0 ];
                 indices[ i - 1 ] = indexes[ idx ];
                 indices[ i ] = indexes[ idx + 1 ];
             }
+            return count - 2;
         },
 
-        applyDrawArraysTriangles: function ( first, count ) {
-            this._indices = new MACROUTILS.Float32Array( count - first );
+        applyDrawArraysTriangles: function ( first, count, startId ) {
             var indices = this._indices;
-            for ( var i = 0, idx = first; i < count; ++i, ++idx ) {
+            count += startId;
+            for ( var i = startId, idx = first; i < count; ++i, ++idx ) {
                 indices[ i ] = idx;
             }
+            return count;
         },
 
-        applyDrawArraysTriangleStrip: function ( first, count ) {
-            this._indices = new MACROUTILS.Float32Array( count - 2 );
+        applyDrawArraysTriangleStrip: function ( first, count, startId ) {
             var indices = this._indices;
-            for ( var i = 2, idx = first; i < count; ++i, ++idx ) {
-                if ( i % 2 ) {
+            count += startId;
+            for ( var i = startId + 2, idx = first; i < count; ++i, ++idx ) {
+                if ( ( i - startId ) % 2 ) {
                     indices[ i - 2 ] = idx;
                     indices[ i - 1 ] = idx + 2;
                     indices[ i ] = idx + 1;
@@ -68,48 +71,61 @@ define( [
                     indices[ i ] = idx + 2;
                 }
             }
+            return count - 2;
         },
 
-        applyDrawArraysTriangleFan: function ( first, count ) {
-            this._indices = new MACROUTILS.Float32Array( count - 2 );
+        applyDrawArraysTriangleFan: function ( first, count, startId ) {
             var indices = this._indices;
             var idx0 = first;
-            for ( var i = 2, idx = first + 1; i < count; ++i, ++idx ) {
+            count += startId;
+            for ( var i = startId + 2, idx = first + 1; i < count; ++i, ++idx ) {
                 indices[ i - 2 ] = idx0;
                 indices[ i - 1 ] = idx;
                 indices[ i ] = idx + 1;
             }
+            return count - 2;
         },
 
         apply: function () {
             var geom = this._geom;
-            if ( !geom.primitives )
+            var primitives = geom.primitives;
+            if ( !primitives )
                 return;
-            for ( var i = 0, l = geom.primitives.length; i < l; i++ ) {
-                var primitive = geom.primitives[ i ];
+            var nbPrimitives = primitives.length;
+            var totalLenArray = 0;
+            var i = 0;
+            for ( i = 0; i < nbPrimitives; i++ ) {
+                var prim = primitives[ i ];
+                totalLenArray += prim.getMode() === prim ? prim.getCount() : prim.getCount() - 2;
+            }
+            this._indices = new MACROUTILS.Uint32Array( totalLenArray );
+            var startId = 0;
+
+            for ( i = 0; i < nbPrimitives; i++ ) {
+                var primitive = primitives[ i ];
                 if ( primitive.getIndices !== undefined ) {
                     var indexes = primitive.indices.getElements();
                     switch ( primitive.getMode() ) {
                     case PrimitiveSet.TRIANGLES:
-                        this.applyDrawElementsTriangles( primitive.getCount(), indexes );
+                        startId = this.applyDrawElementsTriangles( primitive.getCount(), indexes, startId );
                         break;
                     case PrimitiveSet.TRIANGLE_STRIP:
-                        this.applyDrawElementsTriangleStrip( primitive.getCount(), indexes );
+                        startId = this.applyDrawElementsTriangleStrip( primitive.getCount(), indexes, startId );
                         break;
                     case PrimitiveSet.TRIANGLE_FAN:
-                        this.applyDrawElementsTriangleFan( primitive.getCount(), indexes );
+                        startId = this.applyDrawElementsTriangleFan( primitive.getCount(), indexes, startId );
                         break;
                     }
                 } else { // draw array
                     switch ( primitive.getMode() ) {
                     case PrimitiveSet.TRIANGLES:
-                        this.applyDrawArraysTriangles( primitive.getFirst(), primitive.getCount() );
+                        startId = this.applyDrawArraysTriangles( primitive.getFirst(), primitive.getCount(), startId );
                         break;
                     case PrimitiveSet.TRIANGLE_STRIP:
-                        this.applyDrawArraysTriangleStrip( primitive.getFirst(), primitive.getCount() );
+                        startId = this.applyDrawArraysTriangleStrip( primitive.getFirst(), primitive.getCount(), startId );
                         break;
                     case PrimitiveSet.TRIANGLE_FAN:
-                        this.applyDrawArraysTriangleFan( primitive.getFirst(), primitive.getCount() );
+                        startId = this.applyDrawArraysTriangleFan( primitive.getFirst(), primitive.getCount(), startId );
                         break;
                     }
                 }
