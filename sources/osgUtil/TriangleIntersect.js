@@ -29,8 +29,8 @@ define( [
             this.end = end;
             this.dir = Vec3.sub( end, start, [] );
             this.length = Vec3.length( this.dir );
-            var l = 1.0 / this.length;
-            Vec3.mult( this.dir, l, this.dir );
+            this.invLength = 1.0 / this.length;
+            Vec3.mult( this.dir, this.invLength, this.dir );
         },
 
         applyDrawElementsTriangles: function ( count, vertexes, indexes ) {
@@ -183,9 +183,9 @@ define( [
                 v1[ 1 ] = vertexes[ b + 1 ];
                 v1[ 2 ] = vertexes[ b + 2 ];
 
-                v2[ 0 ] = vertexes[ b ];
-                v2[ 1 ] = vertexes[ b + 1 ];
-                v2[ 2 ] = vertexes[ b + 2 ];
+                v2[ 0 ] = vertexes[ c ];
+                v2[ 1 ] = vertexes[ c + 1 ];
+                v2[ 2 ] = vertexes[ c + 2 ];
                 this.intersect( v0, v1, v2 );
             }
         },
@@ -296,7 +296,7 @@ define( [
                 var r0 = 1.0 - u - v;
                 var r1 = u;
                 var r2 = v;
-                var r = t / this.length;
+                var r = t * this.invLength;
 
                 var interX = v0[ 0 ] * r0 + v1[ 0 ] * r1 + v2[ 0 ] * r2;
                 var interY = v0[ 1 ] * r0 + v1[ 1 ] * r1 + v2[ 1 ] * r2;

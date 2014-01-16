@@ -2,19 +2,9 @@ define( [
     'osg/Utils',
     'osg/BoundingBox',
     'osg/Vec3',
-    'osgUtil/TriangleBuilder'
-], function ( MACROUTILS, BoundingBox, Vec3, TriangleBuilder ) {
-
-    var TriangleHit = function ( index, normal, r1, v1, r2, v2, r3, v3 ) {
-        this.index = index;
-        this.normal = normal;
-        this.r1 = r1;
-        this.v1 = v1;
-        this.r2 = r2;
-        this.v2 = v2;
-        this.r3 = r3;
-        this.v3 = v3;
-    };
+    'osgUtil/TriangleBuilder',
+    'osgUtil/TriangleIntersect'
+], function ( MACROUTILS, BoundingBox, Vec3, TriangleBuilder, TriangleIntersect ) {
 
     var KdNode = function ( first, second ) {
         this._bb = new BoundingBox();
@@ -26,41 +16,34 @@ define( [
         this._vertices = vertices;
         this._kdNodes = nodes;
         this._triangles = triangles;
-        this._intersections = intersections;
-        this._s = start;
-        this._e = end;
-        this._nodePath = nodePath;
-        this._d = Vec3.sub( end, start, [ 0.0, 0.0, 0.0 ] );
-        this._length = 0.0;
-        this._inverseLength = 0.0;
+        this._intersector = new TriangleIntersect();
         this._dinvX = [ 0.0, 0.0, 0.0 ];
         this._dinvY = [ 0.0, 0.0, 0.0 ];
         this._dinvZ = [ 0.0, 0.0, 0.0 ];
-        this.init();
+        this.init( intersections, start, end, nodePath );
     };
 
     IntersectKdTree.prototype = {
-        init: function () {
-            var d = this._d;
-            this._length = Vec3.length( d );
-            if ( this._length !== 0.0 )
-                this._inverseLength = 1.0 / this._length;
-            Vec3.mult( d, this._inverseLength, d );
+        init: function ( intersections, start, end, nodePath ) {
+            var d = Vec3.sub( end, start, [ 0.0, 0.0, 0.0 ] );
+            var len = Vec3.length( d );
+            var invLen = 0.0;
+            if ( len !== 0.0 )
+                invLen = 1.0 / len;
+            Vec3.mult( d, invLen, d );
             if ( d[ 0 ] !== 0.0 ) Vec3.mult( d, 1.0 / d[ 0 ], this._dinvX );
             if ( d[ 1 ] !== 0.0 ) Vec3.mult( d, 1.0 / d[ 1 ], this._dinvY );
             if ( d[ 2 ] !== 0.0 ) Vec3.mult( d, 1.0 / d[ 2 ], this._dinvZ );
+
+            this._intersector.hits = intersections;
+            this._intersector.setNodePath( nodePath );
+            this._intersector.set( start, end );
         },
         intersect: ( function () {
 
             var v0 = [ 0.0, 0.0, 0.0 ];
             var v1 = [ 0.0, 0.0, 0.0 ];
             var v2 = [ 0.0, 0.0, 0.0 ];
-            var normal = [ 0.0, 0.0, 0.0 ];
-            var e2 = [ 0.0, 0.0, 0.0 ];
-            var e1 = [ 0.0, 0.0, 0.0 ];
-            var tvec = [ 0.0, 0.0, 0.0 ];
-            var pvec = [ 0.0, 0.0, 0.0 ];
-            var qvec = [ 0.0, 0.0, 0.0 ];
 
             return function ( node, ls, le ) {
                 var first = node._first;
@@ -72,11 +55,7 @@ define( [
                     // treat as a leaf
                     var istart = -first - 1;
                     var iend = istart + second;
-                    var d = this._d;
-                    var len = this._length;
-                    var invLen = this._inverseLength;
-                    var start = this._s;
-                    var epsilon = 1E-20;
+                    var intersector = this._intersector;
 
                     for ( var i = istart; i < iend; ++i ) {
                         var id = i * 3;
@@ -96,49 +75,7 @@ define( [
                         v2[ 1 ] = vertices[ iv2 + 1 ];
                         v2[ 2 ] = vertices[ iv2 + 2 ];
 
-                        Vec3.sub( v2, v0, e2 );
-                        Vec3.sub( v1, v0, e1 );
-                        Vec3.cross( d, e2, pvec );
-
-                        var det = Vec3.dot( pvec, e1 );
-                        if ( det > -epsilon && det < epsilon )
-                            continue;
-                        var invDet = 1.0 / det;
-
-                        Vec3.sub( start, v0, tvec );
-
-                        var u = Vec3.dot( pvec, tvec ) * invDet;
-                        if ( u < 0.0 || u > 1.0 )
-                            continue;
-
-                        Vec3.cross( tvec, e1, qvec );
-
-                        var v = Vec3.dot( qvec, d ) * invDet;
-                        if ( v < 0.0 || ( u + v ) > 1.0 )
-                            continue;
-
-                        var t = Vec3.dot( qvec, e2 ) * invDet;
-
-                        if ( t < epsilon || t > len ) //no intersection
-                            continue;
-
-                        var r0 = 1.0 - u - v;
-                        var r1 = u;
-                        var r2 = v;
-                        var r = t * invLen;
-
-                        var interX = v0[ 0 ] * r0 + v1[ 0 ] * r1 + v2[ 0 ] * r2;
-                        var interY = v0[ 1 ] * r0 + v1[ 1 ] * r1 + v2[ 1 ] * r2;
-                        var interZ = v0[ 2 ] * r0 + v1[ 2 ] * r1 + v2[ 2 ] * r2;
-
-                        Vec3.cross( e1, e2, normal );
-                        Vec3.normalize( normal, normal );
-                        this._intersections.push( {
-                            'ratio': r,
-                            'nodepath': this._nodePath.slice( 0 ),
-                            'triangleHit': new TriangleHit( i, normal.slice( 0 ), r0, v0.slice( 0 ), r1, v1.slice( 0 ), r2, v2.slice( 0 ) ),
-                            'point': [ interX, interY, interZ ]
-                        } );
+                        intersector.intersect( v0, v1, v2 );
                     }
                 } else {
                     var l = [ 0.0, 0.0, 0.0 ];
