@@ -21,7 +21,7 @@ function getShader() {
 
         'void main( void ) {',
         '  vInter = vec3( ModelViewMatrix * vec4( uCenterPicking, 1.0 ) );',
-        '  vNormal = vec3( NormalMatrix * vec4( Normal, 1.0 ) );',
+        '  vNormal = normalize(vec3( NormalMatrix * vec4( Normal, 1.0 )) );',
         '  vVertex = vec3( ModelViewMatrix * vec4( Vertex, 1.0 ) );',
         '  gl_Position = ProjectionMatrix * ModelViewMatrix * vec4( Vertex, 1.0 );',
         '}'
@@ -86,12 +86,12 @@ function getShader() {
     return program;
 }
 
-function loadUrl( url, viewer, node ) {
+function loadUrl( url, viewer, node, unifs ) {
     osg.log( 'loading ' + url );
     var req = new XMLHttpRequest();
     req.open( 'GET', url, true );
     req.onload = function ( aEvt ) {
-        loadModel( JSON.parse( req.responseText ), viewer, node );
+        loadModel( JSON.parse( req.responseText ), viewer, node, unifs );
         osg.log( 'success ' + url );
     };
     req.onerror = function ( aEvt ) {
@@ -130,7 +130,8 @@ function createScene( viewer, unifs ) {
 
     var root = new osg.Node();
 
-    loadModel( getOgre(), viewer, root, unifs );
+    // loadModel( getOgre(), viewer, root, unifs );
+    loadUrl( '../ssao/raceship.osgjs', viewer, root, unifs );
     root.getOrCreateStateSet().setAttributeAndMode( new osg.CullFace( osg.CullFace.DISABLE ) );
 
     var UpdateCallback = function ( base ) {
