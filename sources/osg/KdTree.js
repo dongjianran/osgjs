@@ -56,6 +56,7 @@ define( [
                     var istart = -first - 1;
                     var iend = istart + second;
                     var intersector = this._intersector;
+                    intersector.index = istart;
 
                     for ( var i = istart; i < iend; ++i ) {
                         var id = i * 3;
